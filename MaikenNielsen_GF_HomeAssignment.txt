@@ -41,8 +41,7 @@ summary(pca, loadings = TRUE)
 # How many components to retain? = enough to explain between 70% and 90% of the total variation of the original variables. Another rule is that the eigenvalue should be above 1 (or .70 (Everitt & Hothorn, page 71+72))
 ## Components retained = 3 (eigenvalue above 1, cumulative proportion of 77.8) 
 ### Comp.1  y1= 0.382 * q1_cry + 0.319 * q2_help + 0.379 * q3_breathe + 0.376 * q4_freeze + 0.325 * q5_alien + 0.320 * q6_inferior + 0.284 * q7_weep + 0.308 * q8_support + 0.290 * q9_nerd
-### Comp.2  y2= 0.382 * q1_cry + 0.319 * q2_help + 0.379 * q3_breathe + 0.376 * q4_freeze + 0.325 * q5_alien + 0.320 * q6_inferior + 0.284 * q7_weep + 0.308 * q8_support + 0.290 * q9_nerd
-### Comp.3  y3= 0.382 * q1_cry + 0.319 * q2_help + 0.379 * q3_breathe + 0.376 * q4_freeze + 0.325 * q5_alien + 0.320 * q6_inferior + 0.284 * q7_weep + 0.308 * q8_support + 0.290 * q9_nerd
+
 
 # Scree plot Variances
 screeplot(pca, main = "Screeplot")
