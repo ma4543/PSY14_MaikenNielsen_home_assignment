@@ -1,0 +1,505 @@
+# Coding for ZK project. 
+# Part 1
+
+# Load libraries
+library(psych) # for describe 
+library(lm.beta) # for lm.beta 
+library(tidyverse) # for tidy format 
+library(ggplot2)
+
+# Load data
+data_sample_1 = read.csv("https://tinyurl.com/ha-dataset1")
+
+# overview over data
+data_sample_1 %>% 
+  summary()
+
+data_sample_1 %>% 
+  describe()
+
+# Visual overvoew over data
+data_sample_1 %>%
+  ggplot() + aes(x = pain) + geom_histogram()
+
+data_sample_1 %>%
+  ggplot() + aes(x = pain_cat) + geom_histogram()
+
+data_sample_1 %>%
+  ggplot() + aes(x = STAI_trait) + geom_histogram()
+
+data_sample_1 %>%
+  ggplot() + aes(x = cortisol_serum) + geom_histogram()
+
+data_sample_1 %>%
+  ggplot() + aes(x = cortisol_saliva) + geom_histogram()
+
+# The summary revealed an outlier in "pain". Lets find them
+which(data_sample_1$pain > 10)
+# The summary also revealed an outlier in "STAI-trait". Lets find them
+which(data_sample_1$STAI_trait < 10)
+
+# The above code reveals that participant 34 has a value of 4.2 in STAI-trait, and that participant 88 has a value of 55. Because I am not sure if this is a typing error im going to remove these variables. 
+data_sample <- data_sample_1 %>% 
+  slice(-c(34, 88))
+data_sample
+
+# we want to tranform sex, female = 0, male = 1, in preparation for the regression equation
+my_data <- data_sample %>% 
+  mutate(sex = recode(sex,
+                      "female" = "0",
+                      "male" = "1"))
+
+my_data
+view(my_data)
+
+
+# Create model with sex and age as predictors of pain 
+model1 <- lm(pain ~ sex + age, data = my_data)
+model1
+
+# model 2- we added STAI, pain catastrophizing, mindfulness, and cortisol measures
+model2 <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum, data = my_data)
+model2
+
+#summary of models
+summary(model1)
+summary(model2)
+
+# model comparisson R. squared 
+summary(model1)$adj.r.squared 
+summary(model2)$adj.r.squared
+
+# running an anova on model1 and model2
+anova(model1, model2)
+
+# AIC of model1 and model2
+AIC(model1)
+AIC(model2)
+
+# confidence intervals and std. betas
+library(lsr)
+confint(model1)
+confint(model2)
+standardCoefs(model1)
+standardCoefs(model2)
+
+
+# assumptions check for model2
+# Load libraries
+
+library(gridExtra) # for grid.arrange
+library(olsrr) # for checking assumption of normality
+library(car)
+library(dplyr)
+library(lmtest)
+
+# 1. normality (of the residuals)
+# check skew and kurtosis
+describe(residuals(model2))
+# Correlation between observed residuals and expected residuals under normality.
+nomality_check <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data = my_data)
+ols_test_normality(nomality_check)
+# Graph for detecting violation of normality assumption.
+ols_plot_resid_qq(nomality_check)
+
+# 2. Linearity 
+# If the test is significant (p < 0.05), there might be a violation of the linearity assumption
+model2 %>% 
+  residualPlots() # Based on the plot, we assume linearity of the data
+
+# 3. homogeneity of variance (homoscedasticity) 
+model2 %>% 
+  plot(which = 3) # click return until you find the squared standardized residuals plot
+model2 %>%
+  ncvTest() # A p-value < 0.05 in these tests would indicate a violation of the assumption of homoscedasticity
+model2 %>% 
+  bptest()
+
+# 4. Multicollinearity 
+my_data %>% 
+  select(pain, sex, age, STAI_trait, pain_cat, mindfulness, cortisol_serum, cortisol_saliva) %>% 
+  pairs.panels(col = "red", lm = T)
+
+vif(model2)
+
+#create vector of VIF values
+vif_values2 <- vif(model2)
+
+#create horizontal bar chart to display each VIF value
+barplot(vif_values2, main = "VIF Values", horiz = TRUE, col = "steelblue")
+
+# After checking the assumptions, I saw that the assumption of Multicollinearity is violated. I noticed that cortisol_serum and Cortisol_saliva is highly correlated and decided to remove the cortisol_saliva from the regression
+model2 <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum, data = my_data)
+vif(model2) #Check the VIF
+vif_values2 <- vif(model2)
+barplot(vif_values2, main = "VIF Values", horiz = TRUE, col = "steelblue")
+
+
+______________________________________________________________
+# Coding for project ZK. 
+# Part 2
+
+#Lets prepare the data for part 2
+theory_based_model <- model2
+summary(theory_based_model)
+
+#Diagnostics (again, since we now have to include more variables)
+my_data %>% 
+  summary()
+
+my_data %>% 
+  describe()
+
+my_data %>%
+  ggplot() + aes(x = weight) + geom_histogram()
+
+my_data %>%
+  ggplot() + aes(x = household_income) + geom_histogram()
+
+data_sample %>%
+  ggplot() + aes(x = IQ) + geom_histogram()
+
+# Part 2.1
+# Create model with age, sex, STAI, pain catastrophizing, mindfulness, serum cortisol, weight, IQ, household income.
+model3 <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum + weight + IQ + household_income, data = my_data)
+model3
+summary(model3)
+AIC(model3)
+
+# assumptions check for model3
+# 1. normality (of the residuals)
+# check skew and kurtosis
+describe(residuals(model3))
+# Correlation between observed residuals and expected residuals under normality.
+nomality_check <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum + weight + IQ + household_income, data = my_data)
+ols_test_normality(nomality_check)
+# Graph for detecting violation of normality assumption.
+ols_plot_resid_qq(nomality_check)
+
+# 2. Linearity 
+# If the test is significant (p < 0.05), there might be a violation of the linearity assumption
+model3 %>% 
+  residualPlots() # Based on the plot, we assume linearity of the data
+
+# 3. homogeneity of variance (homoscedasticity) 
+model3 %>% 
+  plot(which = 3) # click return until you find the squared standardized residuals plot
+model3 %>%
+  ncvTest() # A p-value < 0.05 in these tests would indicate a violation of the assumption of homoscedasticity
+model3 %>% 
+  bptest()
+
+# 4. Multicollinearity 
+my_data %>% 
+  select(pain, sex, age, STAI_trait, pain_cat, mindfulness, cortisol_serum, weight, IQ, household_income) %>% 
+  pairs.panels(col = "red", lm = T, cex=5)
+vif(model3)
+vif_values3 <- vif(model3) #create vector of VIF values
+
+#create horizontal bar chart to display each VIF value
+barplot(vif_values3, main = "VIF Values", horiz = TRUE, col = "steelblue")
+
+
+# backward regression model
+mod_back_pain = step(model3, direction = "backward")
+
+#Create new model only using the predictors that were retained in the end of the backward regression
+backward_model <- lm(pain ~ age + pain_cat + mindfulness + cortisol_serum, data = my_data)
+backward_model
+summary(backward_model)
+AIC(backward_model)
+
+# Further model info.
+confint(backward_model)
+standardCoefs(backward_model)
+
+# Model comparison
+AIC(theory_based_model, backward_model)
+#Anova
+anova(backward_model, theory_based_model)
+# R.squared 
+summary(theory_based_model)$adj.r.squared
+summary(backward_model)$adj.r.squared 
+
+
+# PART 2.2
+
+# After this, you decide to put the two models to the test on some new data. 
+# Load data file 2 - ‘home_sample_2.csv
+data_sample2 = read.csv("https://tinyurl.com/87v6emky")
+data_sample2
+
+# overview over data
+view(data_sample2)
+
+data_sample2 %>% 
+  summary()
+data_sample2 %>% 
+  describe()
+
+
+# Visual overview (to check for obvious outliers)
+data_sample2 %>%
+  ggplot() + aes(x = STAI_trait) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = pain_cat) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = cortisol_serum) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = cortisol_saliva) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = mindfulness) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = weight) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = IQ) + geom_histogram()
+data_sample2 %>%
+  ggplot() + aes(x = household_income) + geom_histogram()
+
+# Recode female and male into 0 and 1. 
+my_data2 <- data_sample2 %>% 
+  mutate(sex = recode(sex,
+                      "female" = "0",
+                      "male" = "1"))
+view(my_data2) # Check that it worked. Nice job.
+
+
+# measure how effective your model is
+# calculate predicted values 
+pred_test_theory <- predict(theory_based_model, my_data2) 
+pred_test_theory
+pred_test_backward <- predict(backward_model, my_data2)
+pred_test_backward
+# now we calculate the sum of squared residuals 
+RSS_test1 = sum((my_data2$pain - pred_test_theory)^2)
+RSS_test_back1 = sum((my_data2$pain - pred_test_backward)^2) 
+RSS_test1
+RSS_test_back1
+#The smaller the RSS, the better your model fits your data; the greater the residual sum of squares, the poorer your model fits your data. 
+#A value of zero means your model is a perfect fit.
+#In this case, model2 (theory_based_model) is the better model
+
+_____________
+GARBAGE DUMP 
+
+________________________________________________________________________________
+
+-
+  RAD0 = sum(abs(my_data2$pain - predict(theory_based_model)))
+RSS0 = sum((my_data2$pain - predict(theory_based_model))ˆ2)
+RAS0
+RSS0
+
+
+
+# The above code reveals that it is participant 88 who has a pain value of 55 (max being 10). Because I think this is a typing error, I change the value to the median, which is 5. 
+data_sample <- data_sample_1 %>% 
+  mutate(pain = replace(pain, pain == "55", "5"))
+
+
+# part 3
+
+library(cAIC4) # for cAIC\t 
+library(r2glmm) # for r2beta\t 
+library(lme4) # for lmer 
+library(lmerTest) # to get singificance test in lmer 
+library(MuMIn) # for r.squaredGLMM
+
+data_file4 <- read.csv("https://tinyurl.com/4f8thztv")
+data_file3 <- read.csv("https://tinyurl.com/b385chpu") 
+
+______________________________________
+# Custom function
+stdCoef.merMod <- function(object) {	
+  sdy <- sd(getME(object,"y"))	
+  sdx <- apply(getME(object,"X"), 2, sd)	
+  sc <- fixef(object)*sdx/sdy	
+  se.fixef <- coef(summary(object))[,"Std. Error"]	
+  se <- se.fixef*sdx/sdy	
+  return(data.frame(stdcoef=sc, stdse=se))	
+}	
+______________________________________
+
+# asign "hospital" as a grouping factor
+data_file3 = data_file3 %>% 
+  mutate(hospital = factor(hospital))
+
+data_file4 = data_file4 %>% 
+  mutate(hospital = factor(hospital))
+
+# Check the dataset
+data_file3 %>% 
+  summary()
+data_file4 %>% 
+  summary()  
+
+
+_________
+# create a new data object from the first half of the data (N = 77)
+rand_vars = as.data.frame(matrix(rnorm(mean = 0, sd = 1, n = 50 * nrow(my_data_1)), ncol = 50)) 
+data_pain_withrandomvars = cbind(my_data_1, rand_vars)
+
+training_set = data_pain_withrandomvars[1:77, ] # training set, using half of the data 
+test_set = data_pain_withrandomvars[78:155, ] # test set, the other half of the dataset
+
+mod_pain_train <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum + weight + IQ + household_income, data = training_set) 
+mod_pain_rand_train <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum + weight + IQ + household_income + 
+                            V1 + V2 + V3 + V4 + V5 + V6 + V7 + V8 + V9 + V10 + 
+                            V11 + V12 + V13 + V14 + V15 + V16 + V17 + V18 + V19 + V20 + 
+                            V21 + V22 + V23 + V24 + V25 + V26 + V27 + V28 + V29 + V30 + 
+                            V31 + V32 + V33 + V34 + V35 + V36 + V37 + V38 + V39 + V40 + 
+                            V41 + V42 + V43 + V44 + V45 + V46 + V47 + V48 + V49 + V50, data = training_set)
+
+mod_pain_train %>% 
+  summary()
+
+mod_pain_rand_train %>% 
+  summary()
+
+pred_train <- predict(mod_pain_train) 
+pred_train_rand <- predict(mod_pain_rand_train) 
+RSS_train = sum((training_set[, "pain"] - pred_train) ^2) 
+RSS_train_rand = sum((training_set[, "pain"] - pred_train_rand) ^2) 
+RSS_train
+RSS_train_rand
+
+summary(theory_based_model)$adj.r.squared
+summary(mod_pain_rand_train)$adj.r.squared
+
+mod_back_train = step(mod_pain_rand_train, direction = "backward")
+
+
+data_file3 <- data_file3 %>% 
+  mutate(sex = replace(sex, sex == "woman", "female"))
+
+data_file3.1 <- data_file3 %>% 
+  slice(-c(2))
+
+# exploring clustering in the data
+data_file3.1 %>% 
+  ggplot() + aes(y = hospital, x = pain) + geom_point(aes(color = class),
+                                                      size = 4) + geom_smooth(method = "lm", se = F)
+# part
+
+
+
+
+view(my_data_1)
+#-------
+# ACTUAL DATA. New data
+
+training_set = my_data[1:154, ] 
+test_set = my_data_1[1:154, ] 
+
+theory_based_model <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum, data = training_set) 
+Backward_model <- lm(pain ~ sex + age + STAI_trait + pain_cat + mindfulness + cortisol_serum + weight + IQ + household_income, data = test_set)
+
+theory_based_model %>% 
+  summary()
+
+Backward_model %>% 
+  summary()
+
+
+pred_theory <- predict(theory_based_model) 
+pred_train_rand <- predict(Backward_model) 
+RSS_theory = sum((training_set[, "pain"] - pred_theory)^2) 
+RSS_theory_rand = sum((training_set[,"pain"] - pred_train_rand)^2) 
+RSS_theory
+RSS_theory_rand
+
+summary(theory_based_model)$adj.r.squared
+summary(Backward_model)$adj.r.squared
+
+mod11 = step(Backward_model, direction = "backward")
+
+
+
+
+
+
+# It also reaveals a few outliers in Weight. Lets take care of that: exclude values below .01 quantile (48.16), and above .99 quantile (95.61). First, lets identify which variables those are 
+weight_new <- my_data$weight 
+quantile(weight_new, c(.01, .99))
+
+which(data_sample$weight < 48.16) #  81 87 
+which(data_sample$weight > 95.62) #  84 140
+
+my_data_1 <- my_data %>% 
+  slice(-c(81, 84, 87, 140))
+my_data_1
+
+
+
+
+
+
+TBM_newdata <- lm(pain ~ age + sex + STAI_trait + pain_cat + mindfulness + cortisol_serum + cortisol_saliva, data = my_data2)
+BM_newdata <- lm(pain ~ age + pain_cat + mindfulness + cortisol_serum, data = my_data2)
+
+summary(TBM_newdata)
+summary(BM_newdata)
+
+
+# R.squared 
+summary(TBM_newdata)$adj.r.squared 
+summary(BM_newdata)$adj.r.squared 
+# AIC of model
+AIC(TBM_newdata)
+AIC(BM_newdata)
+
+# Model comparison
+AIC(TBM_newdata, BM_newdata)
+#Anova
+anova(TBM_newdata, BM_newdata)
+
+
+# We are creating a predictive variable for my_data2
+pain_df <- as_tibble(my_data2$pain)	
+#We are creating a prediction with theory_based_model
+predictions_TBM <- predict(theory_based_model, data = pain_df) 
+pain_theory_prediction <- qpcR:::cbind.na(pain_df, predictions_TBM)	
+pain_theory_prediction
+
+# We are creating a predictive variable for my_data2
+pain_df <- as_tibble(my_data2$pain)	
+#We are creating a prediction with theory_based_model
+predictions_BKW <- predict(backward_model, data = pain_df) 
+pain_backward_prediction <- qpcR:::cbind.na(pain_df, predictions_BKW)	
+pain_backward_prediction
+
+# RSS
+RSS(pain_theory_prediction)
+RSS(pain_backward_prediction)
+
+
+
+Theory_based_model_prediction <- predict(theory_based_model, data = my_data2)
+backward_model_prediction <- predict(backward_model, data = my_data2$pain)
+summary(Theory_based_model_prediction)
+summary(backward_model_prediction)
+summary(theory_based_model)
+RSS(backward_model_prediction)
+
+
+
+
+# calculate predicted values 
+pred_test_theory <- predict(theory_based_model, my_data2) 
+pred_test_backward <- predict(backward_model, my_data2)
+# now we calculate the sum of squared residuals 
+RSS_test = sum((my_data2$pain - pred_test_theory)^2)
+RSS_test_back = sum((my_data2$pain - pred_test_backward)^2) 
+RSS_test
+RSS_test_back
+
+
+# measure how effective your model is by measureing the difference between the actual outcome values and the predicted values. 
+RSS_test = sum((my_data2$pain - predict(theory_based_model))^2)
+RSS_back = sum((my_data2$pain - predict(backward_model))^2)
+RSS_test
+RSS_back
+
+
+
+#-------------------------------------------------------------
