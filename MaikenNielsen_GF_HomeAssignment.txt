@@ -1,0 +1,92 @@
+#Assignment GF -Part 1
+#prepare the dataset PAQ_Maiken
+library(psych)
+library(cabootcrs)
+library(ggplot2)
+
+sex <- `PAQ_Maiken.(1)`[c(1:300), 3]
+age <- `PAQ_Maiken.(1)`[c(301:600), 3]
+q1_cry <- `PAQ_Maiken.(1)`[c(601:900), 3]
+q2_help <- `PAQ_Maiken.(1)`[c(901:1200), 3]
+q3_breathe <- `PAQ_Maiken.(1)`[c(1201:1500), 3]
+q4_freeze <- `PAQ_Maiken.(1)`[c(1501:1800), 3]
+q5_alien <- `PAQ_Maiken.(1)`[c(1801:2100), 3]
+q6_inferior <- `PAQ_Maiken.(1)`[c(2101:2400), 3]
+q7_weep <- `PAQ_Maiken.(1)`[c(2401:2700), 3]
+q8_support <- `PAQ_Maiken.(1)`[c(2701:3000), 3]
+q9_nerd <- `PAQ_Maiken.(1)`[c(3001:3300), 3]
+PAQ_data <- data.frame(q1_cry, q2_help, q3_breathe, q4_freeze, q5_alien, q6_inferior, q7_weep, q8_support, q9_nerd)
+
+summary(PAQ_data)
+
+# Omit na's
+pca1 <- na.omit(PAQ_data)
+
+# Descriptive statistics, in particular means and standard deviations
+summary(pca1) # General overview
+describe(pca1) # to see the standard deviations
+
+# Inspecting Covariance and Correlation matrix
+cov_pca1 <- cov(pca1, y = NULL, use = "everything", method = "pearson")
+cov_pca1
+cor_pca1 <- cor(pca1, y = NULL, use = "everything", method = "pearson")
+cor_pca1
+
+
+# PCA and loadings. 
+# Standard deviation, and Cumulative Proportion (of Variance)
+pca <- princomp(pca1, cor=T)
+summary(pca, loadings = TRUE)
+
+# How many components to retain? = enough to explain between 70% and 90% of the total variation of the original variables. Another rule is that the eigenvalue should be above 1 (or .70 (Everitt & Hothorn, page 71+72))
+## Components retained = 3 (eigenvalue above 1, cumulative proportion of 77.8) 
+### Comp.1  y1= 0.382 * q1_cry + 0.319 * q2_help + 0.379 * q3_breathe + 0.376 * q4_freeze + 0.325 * q5_alien + 0.320 * q6_inferior + 0.284 * q7_weep + 0.308 * q8_support + 0.290 * q9_nerd
+### Comp.2  y2= 0.382 * q1_cry + 0.319 * q2_help + 0.379 * q3_breathe + 0.376 * q4_freeze + 0.325 * q5_alien + 0.320 * q6_inferior + 0.284 * q7_weep + 0.308 * q8_support + 0.290 * q9_nerd
+### Comp.3  y3= 0.382 * q1_cry + 0.319 * q2_help + 0.379 * q3_breathe + 0.376 * q4_freeze + 0.325 * q5_alien + 0.320 * q6_inferior + 0.284 * q7_weep + 0.308 * q8_support + 0.290 * q9_nerd
+
+# Scree plot Variances
+screeplot(pca, main = "Screeplot")
+abline(h = 1,col="red", lty=5)  # Add horizontal line to show Eigenvalue
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.4)
+#Also scree plot component variance (just different look)
+plot(pca$sdev^2, xlab = "component number", ylab= "component variance", type= "b", main = "Scree diagram") %>% 
+abline(h = 1, col="red", lty=5) + 
+legend("topright", legend=c("Eigenvalue = 1"),
+       col=c("red"), lty=5, cex=0.4)
+
+# Scree diagram and log-eigenvalue diagram for principal components
+# variance explained by the PC - Scree plot
+plot(pca$sdev^2, xlab = "Component number", ylab = "Component variance", type = "l", main = "Scree diagram")
+#Log(component variance)
+plot(log(pca$sdev^2), xlab = "Component number", ylab= "log(Component variance)", type="l", main= "Log(eigenvalue) diagram")
+
+
+# Visualizing with plots
+plot(pca$scores[,1], xlab = "Participant", ylab = "Comp1", main = "Components for each participant")
+plot(pca$scores[,2], xlab = "Participant", ylab = "Comp2", main = "Components for each participant")
+plot(pca$scores[,3], xlab = "Participant", ylab = "Comp3", main = "Components for each participant")
+# Barplot
+barplot(pca$scores[,1], xlab = "Participant", ylab = "Comp1", main = "Components for each participant")
+barplot(pca$scores[,2], xlab = "Participant", ylab = "Comp2", main = "Components for each participant")
+barplot(pca$scores[,3], xlab = "Participant", ylab = "Comp3", main = "Components for each participant")
+
+
+# Biplot
+biplot1 <- biplot(pca,scale=0, cex=.6)
+biplot1
+# Load library and download ggbiplot
+library(devtools)
+install_github("vqv/ggbiplot")
+library(ggbiplot)
+
+g <- ggbiplot(pca, obs.scale = 2, var.scale = 1, 
+              ellipse = FALSE, 
+              circle = TRUE)
+g <- g + scale_color_discrete(name = '')
+g <- g + theme(legend.direction = 'horizontal', 
+               legend.position = 'top')
+print(g)
+
+
+
